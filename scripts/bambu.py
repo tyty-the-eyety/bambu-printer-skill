@@ -9,6 +9,7 @@
   bambu.py camera OUT.jpg    save one camera frame
   bambu.py watch [SECS]      print status every SECS (default 120) until the job is no longer RUNNING
   bambu.py pause | resume | stop     send that command to the current print
+  bambu.py speed LEVEL       print speed: silent (50%), standard (100%), sport (124%), ludicrous (166%)
   bambu.py ls                list files on the printer's storage
   bambu.py upload FILE       upload a file to the printer's storage (FTPS, port 990)
   bambu.py start NAME        start a plain .gcode already on the printer (the A1 refuses this: use start3mf)
@@ -233,8 +234,16 @@ def main():
         camera(code, sys.argv[2] if len(sys.argv) > 2 else "printer.jpg")
     elif cmd == "watch":
         every = float(sys.argv[2]) if len(sys.argv) > 2 else 120
+        fails = 0
         while True:
-            st = status(code)
+            try:
+                st = status(code); fails = 0
+            except (OSError, socket.timeout) as e:
+                # one dropped connection shouldn't end the watch: retry, give up after 5 in a row
+                fails += 1
+                print(time.strftime("%H:%M"), f"printer not reachable ({fails}/5): {e}", flush=True)
+                if fails >= 5: raise
+                time.sleep(30); continue
             print(time.strftime("%H:%M"), json.dumps(st), flush=True)
             if st["gcode_state"] != "RUNNING" or st["print_error"]:
                 break
@@ -264,6 +273,12 @@ def main():
         print("sent start for", name, "| printer reply:", r, "- check `status` in ~20 s")
     elif cmd in ("pause", "resume", "stop"):
         send(code, cmd)
+    elif cmd == "speed":
+        levels = {"silent": "1", "standard": "2", "sport": "3", "ludicrous": "4"}
+        lvl = levels.get(sys.argv[2].lower(), sys.argv[2]) if len(sys.argv) > 2 else ""
+        if lvl not in levels.values(): sys.exit("usage: bambu.py speed silent|standard|sport|ludicrous (or 1-4)")
+        r = send_print(code, {"sequence_id": "0", "command": "print_speed", "param": lvl})
+        print("sent speed level", lvl, "| printer reply:", (r or {}).get("result", "none"), (r or {}).get("reason", ""))
     elif cmd == "guard":
         args = [a for a in sys.argv[2:] if not a.startswith("--")]
         sys.exit(guard(code, float(args[0]) if args else 30, "--dry-run" in sys.argv))

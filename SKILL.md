@@ -30,6 +30,9 @@ The LAN access code is NOT stored by this skill. The script reads it at runtime 
   The A1 REFUSES plain .gcode (`start` -> result fail), so wrap G-code as .gcode.3mf (see tests/make_tests.py).
   start3mf sends use_ams=false and skips levelling: fine for test moves. For real prints, have the user send from Orca.
 - Control: `bambu.py pause`, `bambu.py resume`, `bambu.py stop` (stop cancels the print and can't be undone).
+- Speed: `bambu.py speed silent|standard|sport|ludicrous` (50% / 100% / 124% / 166%; "half speed" = silent).
+  The A1's start routine resets the speed, so send it once `layer_num` is 1 or more, then check `spd_lvl` in `status`
+  (1 = silent ... 4 = ludicrous). Changing speed is harmless, so do it whenever the user asks.
 
 > **Tested on a real A1 in LAN mode, 2026-11-07** (tests/RESULTS.md): pause/resume/stop, upload + `start3mf`, the guard
 > staying quiet when a print lowers its temperature, the guard stopping a job by itself, and camera detection
@@ -71,3 +74,7 @@ Notes
 - Ports: 8883 MQTT (status + commands), 6000 camera (A1/P1 protocol), 990 FTPS.
 - The printer firmware has its own thermal-runaway protection; the guard is an extra layer, not a replacement.
 - The guard only runs while a job is active, and exits after the job ends.
+- `watch` retries if the printer briefly doesn't answer (up to 5 times in a row), so one dropped connection doesn't end it.
+- Bed readings that jump 20+ C within seconds can't be real (the bed can't heat or cool that fast). That points to a
+  sensor/cable/plug fault, not real overheating. Log `status` every ~10 s to capture the pattern, tell the user, and suggest
+  checking the bed cable and connector (Bambu recalled A1 bed cables in 2024).

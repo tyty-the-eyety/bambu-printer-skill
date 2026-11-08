@@ -8,7 +8,7 @@ local network, with no Bambu cloud account needed:
 - **Watch:** follows a print to the end and reports back
 - **Guard:** a thermal watchdog that **stops** the print on overheating, plus camera checks
   every few minutes that **pause** the print if it's clearly failing (spaghetti, part knocked loose)
-- **Control:** pause / resume / stop, list and upload files, start a `.gcode.3mf`
+- **Control:** pause / resume / stop, print speed (e.g. *"make it half speed"*), list and upload files, start a `.gcode.3mf`
 
 Just ask things like *"how's the print going?"*, *"send me a camera picture"* or
 *"guard this print while I'm out"*.
